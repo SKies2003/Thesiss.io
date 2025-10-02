@@ -1,3 +1,11 @@
+# Python virtual environments
 venv/
-__pycache__/
+.venv/
+
+# Database files
 *.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
