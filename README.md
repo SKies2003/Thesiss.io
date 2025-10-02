@@ -8,7 +8,7 @@ Thesiss.io, a next-generation investment intelligence platform designed for the 
 
 ```bash
 git clone https://github.com/SKies2003/Thesiss.io.git
-cd Thesiss.io/backend/authentication
+cd Thesiss.io/backend
 ```
 
 ### Create virtual environment
@@ -56,4 +56,5 @@ API Endpoints Available:
 - POST /auth/register - Create new user
 - POST /auth/token - Login and get access token
 - Use Authorize button to get authenticated
-- GET /auth/profile - Get user profile (requires authentication)
+
+use any functionality afterwards
