@@ -3,16 +3,15 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import Annotated
 
-from database import models
-from schemas import user as user_schema
-from core.security import get_password_hash, verify_password, create_access_token
+from app.database import models
+from app.schemas import user as user_schema
+from app.core.security import get_password_hash, verify_password, create_access_token
 from .dependencies import get_db, get_current_user
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
-
+router = APIRouter()
 
 @router.post(
-    "/register", response_model=user_schema.User, status_code=status.HTTP_201_CREATED
+    "/register", response_model=user_schema.UserWithToken, status_code=status.HTTP_201_CREATED
 )
 def create_user(user: user_schema.UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
@@ -24,7 +23,15 @@ def create_user(user: user_schema.UserCreate, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    return db_user
+    
+    # Create access token for the newly registered user
+    access_token = create_access_token(data={"sub": db_user.email, "id": db_user.id})
+    
+    return {
+        "user": db_user,
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
 
 
 @router.post("/token", response_model=user_schema.Token)
@@ -44,5 +51,5 @@ def login_for_access_token(
 
 
 @router.get("/me", response_model=user_schema.User)
-def read_users_me(current_user: user_schema.User = Depends(get_current_user)):
+def read_users_me(current_user: models.User = Depends(get_current_user)):
     return current_user

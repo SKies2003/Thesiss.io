@@ -4,13 +4,13 @@ from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from typing import Annotated
 
-from database.database import SessionLocal
-from database import models
-from core.security import SECRET_KEY, ALGORITHM
-from schemas import user as user_schema
+from app.database.database import SessionLocal
+from app.database import models
+from app.core.config import settings # Use centralized settings
+from app.schemas import user as user_schema
 
+# The tokenUrl should be the full path from the root of the API
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
-
 
 def get_db():
     db = SessionLocal()
@@ -18,7 +18,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
 
 def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)
@@ -29,7 +28,7 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
