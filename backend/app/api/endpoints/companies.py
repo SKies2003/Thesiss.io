@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from datetime import date
-from typing import Annotated
+from typing import Annotated, List
 
 from app.api.endpoints import dependencies
 from app.crud import company as company_crud
@@ -10,6 +10,17 @@ from app.database import models
 
 # Prefix and tags are defined in the main router, so they are not needed here.
 router = APIRouter()
+
+@router.get("/list", response_model=List[company_schema.CompanyList])
+def list_all_companies(
+    db: Session = Depends(dependencies.get_db),
+    current_user: models.User = Depends(dependencies.get_current_user)
+):
+    """
+    Fetch all available companies with their names and symbols
+    """
+    companies = company_crud.get_all_companies(db)
+    return companies
 
 @router.get("/{symbol}", response_model=company_schema.CompanyData)
 def get_company_timeseries_data(

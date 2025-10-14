@@ -37,3 +37,12 @@ class CompanyData(BaseModel):
 
     class Config:
         from_attributes = True
+
+class CompanyList(BaseModel):
+    id: int
+    company_name: str
+    symbol: str
+    industry: Optional[str] = None
+
+    class Config:
+        from_attributes = True

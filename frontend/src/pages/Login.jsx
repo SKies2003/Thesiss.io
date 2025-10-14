@@ -16,9 +16,59 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (values, { setSubmitting }) => {
+<<<<<<< Updated upstream
     // Replace with your API call
     toast.success("Login successful!");
     setSubmitting(false);
+=======
+    try {
+      const body = new URLSearchParams();
+      body.append("username", values.email);
+      body.append("password", values.password);
+
+      const response = await fetch("http://localhost:8000/auth/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Login failed:', error);
+        toast.error(error.detail || "Login failed");
+        setSubmitting(false);
+        return;
+      }
+
+      const data = await response.json();
+      console.log('Login successful, token received:', data.access_token ? 'Yes' : 'No');
+      
+      // Store token in localStorage
+      localStorage.setItem('token', data.access_token);
+      const userRes = await fetch("http://localhost:8000/auth/me", {
+        headers: { Authorization: `Bearer ${data.access_token}` },
+      });
+      
+      if (!userRes.ok) {
+        console.error('Failed to fetch user data:', await userRes.text());
+        toast.error("Failed to get user information");
+        setSubmitting(false);
+        return;
+      }
+      
+      const userData = await userRes.json();
+      console.log('User data received:', userData);
+
+      login(data.access_token, userData);
+      toast.success("Login successful!");
+      navigate("/");
+    } catch (err) {
+      console.error('Login error details:', err);
+      toast.error(`Login error: ${err.message}`);
+    } finally {
+      setSubmitting(false);
+    }
+>>>>>>> Stashed changes
   };
 
   return (

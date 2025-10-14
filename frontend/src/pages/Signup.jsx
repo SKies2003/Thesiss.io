@@ -2,7 +2,13 @@ import React, { useState } from 'react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { toast } from 'react-toastify';
+<<<<<<< Updated upstream
 import { Link } from 'react-router-dom';
+=======
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
+>>>>>>> Stashed changes
 
 // Validation schema
 const SignupSchema = Yup.object().shape({
@@ -17,12 +23,38 @@ const SignupSchema = Yup.object().shape({
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
+<<<<<<< Updated upstream
+=======
+  const { login } = useAuth();
+  const navigate = useNavigate();
+>>>>>>> Stashed changes
 
-  // Form submission handler placeholder
+  // Form submission handler
   const handleSubmit = async (values, { setSubmitting }) => {
+<<<<<<< Updated upstream
     // Once you have your endpoint, swap in the request here
     // Example: await fetch('YOUR_SIGNUP_URL', { method: 'POST', body: JSON.stringify(values) });
     toast.success('Account created successfully!');
+=======
+  try {
+    const res = await fetch('http://localhost:8000/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.detail || 'Failed to register');
+    } else {
+      // Use AuthContext login method to properly set user state
+      login(data.access_token, data.user);
+      toast.success('Account created successfully!');
+      navigate('/');
+    }
+  } catch (err) {
+    toast.error('Network error');
+  } finally {
+>>>>>>> Stashed changes
     setSubmitting(false);
   };
 

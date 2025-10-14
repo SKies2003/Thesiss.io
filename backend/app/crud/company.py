@@ -2,6 +2,12 @@ from sqlalchemy.orm import Session
 from datetime import date
 from app.database import models
 
+def get_all_companies(db: Session):
+    """
+    Fetch all companies with their names and symbols
+    """
+    return db.query(models.Company).all()
+
 def get_company_data_by_symbol(db: Session, symbol: str, start_date: date, end_date: date):
     """
     Fetches all time-series data for a given company symbol within a date range.

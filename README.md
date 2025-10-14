@@ -37,24 +37,25 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Database Setup
-
-The database will be created automatically when you first run the app.
-
 ### Run the Application
 
 ```bash
-uvicorn main:app --reload
+uvicorn app.main:app --reload
 ```
 
 ### Test the API
 
-Visit: http://localhost:8000/docs for interactive API documentation
+Visit: <http://localhost:8000/docs> for interactive API documentation
 
 API Endpoints Available:
 
-- POST /auth/register - Create new user
-- POST /auth/token - Login and get access token
-- Use Authorize button to get authenticated
+1. Authentication Endpoints
 
-use any functionality afterwards
+- POST /auth/register - Create User
+- POST /auth/token - Login for access token
+- Use Authorize button to get authenticated (mandatory to use other functionality)
+
+2. Companies Endpoints
+
+- GET /companies/list - List All Companies
+- GET /companies/{symbol} - Get specific companies data and details (eg. Enter - "reliance.ns", 2025-01-01, 2025-10-01)
