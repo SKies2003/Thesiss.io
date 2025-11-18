@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/* Smooth fade */
+@keyframes fade {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-fade { animation: fade 0.25s ease-out; }
+
+/* Pop effect */
+@keyframes pop {
+  0% { transform: scale(0.93); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-pop { animation: pop 0.22s ease-out; }
+
+/* Glass backdrop */
+.glass {
+  backdrop-filter: blur(18px) saturate(180%);
+  background: rgba(255,255,255,0.09);
+}
+
+/* Smooth dropdown */
+.dropdown-card {
+  animation: fade 0.18s ease-out;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+}
+
+/* Premium gradient button */
+.btn-premium {
+  background: linear-gradient(135deg, #4ea6ff 0%, #005bea 100%);
+}
+.btn-premium:hover {
+  background: linear-gradient(135deg, #6bb7ff 0%, #1a6bff 100%);
+}
+@keyframes shimmer {
+  0% { background-position: -500px 0; }
+  100% { background-position: 500px 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    #dddddd20 25%,
+    #ffffff40 50%,
+    #dddddd20 75%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 1.3s infinite;
+}
