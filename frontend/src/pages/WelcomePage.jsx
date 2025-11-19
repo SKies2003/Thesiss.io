@@ -15,9 +15,18 @@ const WelcomePage = ({ openAuth }) => {
 
         {/* Logo */}
         <img
-          src="src/assets/—Pngtree—blue stock trading graph_6050459.png"
-          className="w-[260px] mb-6 drop-shadow-[0_20px_40px_rgba(0,0,0,0.45)]"
-        />
+        src="src/assets/—Pngtree—blue stock trading graph_6050459.png"
+        className="
+          w-[380px]              /* was 260px → now bigger */
+          mb-6 
+          drop-shadow-[0_20px_40px_rgba(0,0,0,0.45)]
+          transition-transform 
+          duration-300
+          hover:scale-105        /* subtle hover zoom */
+        "
+        style={{ transform: "scale(1.03)" }}   /* slight default zoom */
+      />
+
 
         {/* Heading */}
         <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-tight">

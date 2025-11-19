@@ -29,7 +29,7 @@ const Navbar = ({ openAuth }) => {
         alt="Thesis.io logo"
         className="
           w-auto 
-          h-40              /* bigger height = bigger logo */
+          h-45              /* bigger height = bigger logo */
           object-contain
           transition-transform 
           duration-300 

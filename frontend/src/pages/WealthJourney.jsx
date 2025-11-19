@@ -95,4 +95,4 @@ const WealthJourney = () => {
   );
 };
 
-export default WealthJourney;
+export default WealthJourney; 
