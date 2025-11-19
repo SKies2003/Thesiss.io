@@ -2,28 +2,46 @@ import React from "react";
 
 const WelcomePage = ({ openAuth }) => {
   return (
-    <div className="bg-[#232323] min-h-screen flex flex-col justify-center items-center text-white px-6">
+    <div className="relative min-h-screen bg-[#0b0d12] flex flex-col items-center justify-center overflow-hidden px-6">
 
-      <img
-        src="/src/assets/image-removebg-preview (1) 1 (1).png"
-        className="w-[300px] mb-6 opacity-90"
-      />
+      {/* Background gradients */}
+      <div className="absolute inset-0">
+        <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-[#1d4ed8]/20 blur-[180px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-[#9333ea]/15 blur-[180px]" />
+      </div>
 
-      <h1 className="text-4xl font-bold mb-3 text-center">
-        Welcome to Thesis.io
-      </h1>
+      {/* Content container */}
+      <div className="relative z-10 flex flex-col items-center text-center">
 
-      <p className="text-gray-300 text-center max-w-xl mb-8">
-        Track event-driven compounding and project future wealth.  
-        Login or Sign Up to get started.
-      </p>
+        {/* Logo */}
+        <img
+          src="src/assets/—Pngtree—blue stock trading graph_6050459.png"
+          className="w-[260px] mb-6 drop-shadow-[0_20px_40px_rgba(0,0,0,0.45)]"
+        />
 
-      <button
-        onClick={openAuth}
-        className="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-bold transition"
-      >
-        Get Started
-      </button>
+        {/* Heading */}
+        <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-tight">
+          Welcome to <span className="text-[#3b82f6]">Thesis.io</span>
+        </h1>
+
+        {/* Subtitle */}
+        <p className="text-slate-300 text-sm sm:text-base max-w-md leading-relaxed mb-10">
+          Discover how real company events influence long-term growth.
+          Visualize wealth, analyze history, and build your financial conviction.
+        </p>
+
+        {/* CTA Button */}
+        <button
+          onClick={openAuth}
+          className="px-8 py-3 text-sm sm:text-base font-semibold rounded-xl 
+                     bg-gradient-to-r from-[#2563eb] to-[#1d4ed8]
+                     hover:from-[#1d4ed8] hover:to-[#2563eb]
+                     shadow-[0_18px_40px_rgba(37,99,235,0.45)]
+                     transition-all duration-200 hover:scale-[1.02]"
+        >
+          Get Started
+        </button>
+      </div>
     </div>
   );
 };

@@ -1,30 +1,46 @@
+// src/components/AuthModal.jsx
 import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
+import sideImage from "../assets/image 3.png"; // uses your image
 
 const AuthModal = ({ onClose }) => {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState("login");
+
+  const [mode, setMode] = useState("login"); // "login" | "signup"
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const isLogin = mode === "login";
 
   const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
-  const authenticate = async () => {
+  const validate = () => {
     if (!form.email || !form.password) {
-      toast.error("Please fill all fields.");
-      return;
+      toast.error("Please fill in all fields.");
+      return false;
     }
+    if (!isLogin && form.password.length < 8) {
+      toast.error("Password must be at least 8 characters.");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
 
     setLoading(true);
-
     try {
-      let res, data;
+      let res;
+      let data;
 
-      if (mode === "login") {
+      if (isLogin) {
         const body = new URLSearchParams();
         body.append("username", form.email);
         body.append("password", form.password);
@@ -45,79 +61,222 @@ const AuthModal = ({ onClose }) => {
       data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.detail || "Something went wrong.");
-        setLoading(false);
+        toast.error(data.detail || "Authentication failed.");
         return;
       }
 
-      login(data.access_token, data.user || { email: form.email });
-      toast.success(mode === "login" ? "Logged in!" : "Account created!");
+      login(
+        data.access_token,
+        data.user || { email: form.email } // /auth/me will refresh real user
+      );
 
-      setLoading(false);
+      toast.success(isLogin ? "Logged in successfully!" : "Account created!");
       onClose();
       navigate("/");
-    } catch {
-      toast.error("Network error");
+    } catch (err) {
+      console.error(err);
+      toast.error("Network error. Please try again.");
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex justify-center items-center z-50">
-      <div className="bg-[#18181B] p-8 rounded-xl w-[380px] shadow-2xl text-white animate-pop font-sans">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center px-4 animate-fade">
+      {/* Outer container */}
+      <div className="w-full max-w-4xl bg-gradient-to-br from-[#020617] via-[#020617] to-[#020617] rounded-3xl border border-[#1e293b] shadow-[0_24px_80px_rgba(0,0,0,0.7)] overflow-hidden flex flex-col md:flex-row relative animate-pop">
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-200 text-xl leading-none"
+        >
+          ✕
+        </button>
 
-        {/* Header Tabs */}
-        <div className="flex justify-between items-center mb-6">
-          <button
-            className={`px-4 py-2 text-base ${
-              mode === "login" ? "text-blue-400" : "text-gray-400"
-            }`}
-            onClick={() => setMode("login")}
-          >
-            Login
-          </button>
+        {/* LEFT: Illustration */}
+        <div className="hidden md:flex md:w-1/2 bg-[#020617] relative items-center justify-center p-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_#1d4ed833,_transparent)] pointer-events-none" />
 
-          <button
-            className={`px-4 py-2 text-base ${
-              mode === "signup" ? "text-blue-400" : "text-gray-400"
-            }`}
-            onClick={() => setMode("signup")}
-          >
-            Signup
-          </button>
-
-          <button className="text-gray-400 text-xl" onClick={onClose}>
-            ✕
-          </button>
+          <div className="relative">
+            <img
+              src={sideImage}
+              alt="Wealth journey"
+              className="max-h-[380px] w-auto drop-shadow-[0_26px_60px_rgba(0,0,0,0.9)]"
+            />
+            <div className="absolute -bottom-6 left-4 bg-[#020617e6] border border-[#1e293b] rounded-2xl px-4 py-3 text-xs text-gray-200 backdrop-blur">
+              <div className="font-semibold text-sm text-white">
+                Event-Driven Compounding
+              </div>
+              <div className="text-[11px] text-gray-400 mt-1">
+                See how earnings, dividends & corporate actions shape long-term
+                returns.
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Email */}
-        <input
-          name="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={handleChange}
-          className="w-full p-3 rounded-lg bg-[#2D2C2F] border border-gray-600 mb-3 font-sans"
-        />
+        {/* RIGHT: Auth card */}
+        <div className="w-full md:w-1/2 bg-[#020617] px-6 sm:px-8 py-7 flex flex-col justify-center">
+{/* Brand + Heading */}
+<div className="mb-5">
+  <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">
+    THESIS.IO
+  </div>
 
-        {/* Password */}
-        <input
-          name="password"
-          type="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={handleChange}
-          className="w-full p-3 rounded-lg bg-[#2D2C2F] border border-gray-600 mb-6 font-sans"
-        />
+  {isLogin ? (
+    <>
+      {/* LOGIN PAGE HEADER */}
+      <div className="text-[12px] sm:text-sm text-slate-400 mb-1">
+        Good to see you here
+      </div>
 
-        {/* Button */}
-        <button
-          onClick={authenticate}
-          disabled={loading}
-          className="w-full bg-blue-600 py-3 rounded-lg text-white font-semibold hover:bg-blue-700 transition font-sans"
-        >
-          {loading ? "Please wait..." : mode === "login" ? "Login" : "Create Account"}
-        </button>
+      <h2 className="text-xl sm:text-2xl font-semibold text-white">
+        Welcome to Thesis.io
+      </h2>
+    </>
+  ) : (
+    <>
+      {/* SIGNUP PAGE HEADER (unchanged) */}
+      <h2 className="text-xl sm:text-2xl font-semibold text-white">
+        Create your Thesis.io account
+      </h2>
+
+      <p className="text-xs sm:text-sm text-slate-400 mt-1.5">
+      Let’s get you set up
+      </p>
+    </>
+  )}
+</div>
+
+
+
+          {/* Tabs */}
+          <div className="flex justify-center mb-6">
+            <div className="flex bg-[#0f0f17] border border-[#2a2a33] rounded-full p-1">
+              <button
+                type="button"
+                onClick={() => setMode("login")}
+                className={`px-5 py-2 text-sm rounded-full transition ${
+                  isLogin
+                    ? "bg-white text-black font-semibold"
+                    : "text-slate-400 hover:text-slate-100"
+                }`}
+              >
+                Log in
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMode("signup")}
+                className={`px-5 py-2 text-sm rounded-full transition ${
+                  !isLogin
+                    ? "bg-white text-black font-semibold"
+                    : "text-slate-400 hover:text-slate-100"
+                }`}
+              >
+                Sign up
+              </button>
+            </div>
+          </div>
+
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4 text-sm">
+            {/* Email */}
+            <div>
+              <label className="block text-xs text-slate-300 mb-1.5">
+                Email
+              </label>
+              <input
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="you@example.com"
+                className="w-full bg-[#020617] border border-[#1f2937] rounded-lg px-3.5 py-2.5 text-sm text-gray-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent"
+              />
+            </div>
+
+            {/* Password */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs text-slate-300">
+                  Password
+                </label>
+                {isLogin && (
+                  <button
+                    type="button"
+                    className="text-[11px] text-slate-400 hover:text-slate-200"
+                  >
+                    Forgot?
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder={isLogin ? "Enter your password" : "At least 8 characters"}
+                  className="w-full bg-[#020617] border border-[#1f2937] rounded-lg px-3.5 py-2.5 pr-10 text-sm text-gray-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-xs text-slate-400 hover:text-slate-200"
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+              {!isLogin && (
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Use a strong password. You&apos;ll use this to log back in.
+                </p>
+              )}
+            </div>
+
+            {/* Submit button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-2 bg-[#2563eb] hover:bg-[#1d4ed8] disabled:bg-[#1e3a8a] text-white text-sm font-semibold py-2.5 rounded-lg shadow-[0_16px_40px_rgba(37,99,235,0.45)] transition"
+            >
+              {loading
+                ? "Please wait..."
+                : isLogin
+                ? "Log in"
+                : "Create account"}
+            </button>
+          </form>
+
+          {/* Bottom switch link */}
+          <div className="mt-4 text-[11px] text-slate-400">
+            {isLogin ? (
+              <>
+                Don&apos;t have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => setMode("signup")}
+                  className="text-slate-100 underline underline-offset-2"
+                >
+                  Sign up
+                </button>
+              </>
+            ) : (
+              <>
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => setMode("login")}
+                  className="text-slate-100 underline underline-offset-2"
+                >
+                  Log in
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
