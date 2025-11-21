@@ -22,6 +22,21 @@ def list_all_companies(
     companies = company_crud.get_all_companies(db)
     return companies
 
+
+# --- CRITICAL FIX: This route must come BEFORE /{symbol} ---
+@router.get("/ticker", response_model=List[company_schema.CompanyTicker])
+def get_ticker_tape_data(
+    db: Session = Depends(dependencies.get_db),
+):
+    """
+    Get real-time ticker data for the navbar tape.
+    This is a public endpoint (no auth required) so it loads instantly.
+    """
+    data = company_crud.get_ticker_data(db)
+    if not data:
+        return [] 
+    return data
+
 @router.get("/{symbol}", response_model=company_schema.CompanyData)
 def get_company_timeseries_data(
     symbol: str,
@@ -51,3 +66,4 @@ def get_company_timeseries_data(
         )
     
     return company_data
+

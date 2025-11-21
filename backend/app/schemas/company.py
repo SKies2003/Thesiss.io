@@ -46,3 +46,14 @@ class CompanyList(BaseModel):
 
     class Config:
         from_attributes = True
+
+# --- ADD THIS NEW SCHEMA ---
+class CompanyTicker(BaseModel):
+    symbol: str
+    company_name: str
+    current_price: float
+    change_percent: float
+    is_profit: bool
+
+    class Config:
+        from_attributes = True

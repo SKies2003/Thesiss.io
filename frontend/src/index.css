@@ -48,3 +48,25 @@
   background-size: 1000px 100%;
   animation: shimmer 1.3s infinite;
 }
+/* --- TICKER ANIMATION --- */
+@keyframes ticker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-ticker {
+  /* Changed from 40s to 150s to make it much slower */
+  animation: ticker 500s linear infinite;
+  width: max-content;
+  display: flex;
+  will-change: transform;
+}
+
+/* Force pause on hover */
+.animate-ticker:hover {
+  animation-play-state: paused;
+}

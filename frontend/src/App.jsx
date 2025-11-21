@@ -1,5 +1,5 @@
-// src/App.jsx
 import Navbar from "./components/Navbar";
+import TickerTape from "./components/TickerTape"; // Import Ticker
 import Home from "./pages/HomePage";
 import WelcomePage from "./pages/WelcomePage";
 import { Routes, Route } from "react-router-dom";
@@ -9,6 +9,7 @@ import { useAuth } from "./contexts/AuthContext";
 import { useState, useEffect } from "react";
 import AuthModal from "./components/AuthModal";
 import CompanyDashboard from "./pages/CompanyDashboard";
+import Footer from "./components/Footer";
 
 function App() {
   const { user } = useAuth();
@@ -26,17 +27,25 @@ function App() {
       )}
 
       <Navbar openAuth={() => setAuthModalOpen(true)} />
+      
+      {/* Ticker Tape appears on all pages if user is logged in (or always, based on your pref) */}
+      {/* Assuming you want it visible always, but maybe only data loads if auth? */}
+      {/* Let's show it always for the cool factor */}
+      <TickerTape />
 
-      {!user ? (
-        <WelcomePage openAuth={() => setAuthModalOpen(true)} />
-      ) : (
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/wealth-journey" element={<WealthJourney />} />
-          <Route path="/wealth-projector" element={<WealthProjector />} />
-          <Route path="/company/:symbol" element={<CompanyDashboard />} />
-        </Routes>
-      )}
+      <div className="pt-10"> {/* Add padding-top wrapper to push content down below Ticker */}
+        {!user ? (
+          <WelcomePage openAuth={() => setAuthModalOpen(true)} />
+        ) : (
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/wealth-journey" element={<WealthJourney />} />
+            <Route path="/wealth-projector" element={<WealthProjector />} />
+            <Route path="/company/:symbol" element={<CompanyDashboard />} />
+          </Routes>
+        )}
+      </div>
+      <Footer />
     </>
   );
 }
