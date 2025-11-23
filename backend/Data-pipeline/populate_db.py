@@ -8,15 +8,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
+# Load environment variables from .env file BEFORE any imports that need them
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+load_dotenv(dotenv_path=env_path)
+
 # Add the project root to the Python path to allow for absolute imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.database.models import (
     Base, Company, StockPrice, FinancialReport, CorporateAction, PeriodType, ActionType
 )
-
-# Load environment variables from .env file
-load_dotenv()
 password = os.getenv("DATABASE_PASSWORD")
 if not password:
     raise ValueError("DATABASE_PASSWORD environment variable not set.")
