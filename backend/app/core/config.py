@@ -10,11 +10,9 @@ class Settings(BaseSettings):
     # Construct the database URL from settings
     @property
     def DATABASE_URL(self) -> str:
-        return f"postgresql://postgres:{self.DATABASE_PASSWORD}@localhost:5433/Python"
+        return f"postgresql://postgres:{self.DATABASE_PASSWORD}@localhost:5432/Python"
 
     class Config:
-        env_file = "/Users/ayushisingh/Downloads/Thesiss.io-2/backend/.env"
-
-
+        env_file = ".env"
 
 settings = Settings()

@@ -3,4 +3,4 @@ __pycache__/
 __init__.py
 *.db
 .env
-.csv
+.env.save

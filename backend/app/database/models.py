@@ -1,5 +1,5 @@
 from .database import Base
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum, Float, BigInteger
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Enum, Float, BigInteger
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 import enum
@@ -72,3 +72,31 @@ class CorporateAction(Base):
     details = Column(JSONB)
     
     company = relationship("Company", back_populates="corporate_actions")
+
+
+class MarketIndex(Base):
+    __tablename__ = "market_indices"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    symbol = Column(String(50), unique=True, nullable=False, index=True)
+    industry = Column(String(100))
+    
+    hourly_prices = relationship("HourlyIndexPrice", back_populates="index", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<MarketIndex(symbol='{self.symbol}', name='{self.name}')>"
+
+
+class HourlyIndexPrice(Base):
+    __tablename__ = "hourly_index_prices"
+    
+    id = Column(Integer, primary_key=True)
+    index_id = Column(Integer, ForeignKey('market_indices.id'), nullable=False)
+    datetime = Column(DateTime, nullable=False, index=True)
+    price = Column(Float, nullable=False)
+    
+    index = relationship("MarketIndex", back_populates="hourly_prices")
+
+    def __repr__(self):
+        return f"<HourlyIndexPrice(symbol='{self.index.symbol}', datetime='{self.datetime}', price='{self.price}')>"

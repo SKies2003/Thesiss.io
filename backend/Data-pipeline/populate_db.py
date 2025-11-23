@@ -22,7 +22,7 @@ if not password:
     raise ValueError("DATABASE_PASSWORD environment variable not set.")
 
 # --- Database Connection ---
-DATABASE_URL = f"postgresql://postgres:{password}@localhost:5433/Python"
+DATABASE_URL = f"postgresql://postgres:{password}@localhost:5432/Python"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
