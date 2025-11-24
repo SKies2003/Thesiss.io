@@ -8,7 +8,11 @@ import WealthProjector from "./pages/WealthProjector";
 import { useAuth } from "./contexts/AuthContext";
 import { useState, useEffect } from "react";
 import AuthModal from "./components/AuthModal";
+import MarketOverview from "./pages/MarketOverview";
+import Profile from "./pages/Profile";
+import NotFound from "./pages/NotFound";
 import CompanyDashboard from "./pages/CompanyDashboard";
+import PortfolioSummary from "./pages/PortfolioSummary";
 import Footer from "./components/Footer";
 
 function App() {
@@ -42,6 +46,11 @@ function App() {
             <Route path="/wealth-journey" element={<WealthJourney />} />
             <Route path="/wealth-projector" element={<WealthProjector />} />
             <Route path="/company/:symbol" element={<CompanyDashboard />} />
+            <Route path="/market-overview" element={<MarketOverview />} />
+            <Route path="/portfolio-summary" element={<PortfolioSummary />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="*" element={<NotFound />} />
+          
           </Routes>
         )}
       </div>

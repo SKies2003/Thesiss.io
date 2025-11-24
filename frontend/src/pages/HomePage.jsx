@@ -62,14 +62,20 @@ const HomePage = () => {
           <div className="flex gap-4 justify-center md:justify-start">
 
             <Link to="/wealth-journey">
-              <button className="px-8 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 shadow-lg hover:shadow-green-500/30 transition">
+              <button className="px-5 w-43 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 shadow-lg hover:shadow-green-500/30 transition">
                 Analyze History
               </button>
             </Link>
 
             <Link to="/wealth-projector">
-              <button className="px-8 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow-lg hover:shadow-blue-500/30 transition">
+              <button className="px-5 w-43 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow-lg hover:shadow-blue-500/30 transition">
                 Project Wealth
+              </button>
+            </Link>
+
+            <Link to="/market-overview">
+              <button className="px-5 w-43 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 shadow-lg hover:shadow-green-500/30 transition">
+                Market Overview
               </button>
             </Link>
 
