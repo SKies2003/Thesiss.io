@@ -61,14 +61,30 @@ def safe_date_conversion(date_obj):
 def populate_database():
     """
     Main function to clear and populate the database with fresh data.
+    PRESERVES: users table (so registered accounts are not deleted)
+    CLEARS: companies, stock_prices, financial_reports, corporate_actions
     """
-    # --- Reset Database ---
-    print("Dropping and recreating all database tables...")
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    print("Tables created successfully.")
-
     session = SessionLocal()
+    
+    # --- Selective Clear: Preserve Users ---
+    print("Clearing company-related tables (preserving users)...")
+    try:
+        # Delete in correct order to respect foreign key constraints
+        session.query(CorporateAction).delete()
+        session.query(FinancialReport).delete()
+        session.query(StockPrice).delete()
+        session.query(Company).delete()
+        session.commit()
+        print("Company tables cleared successfully (users preserved).")
+    except Exception as e:
+        print(f"Error clearing tables: {e}")
+        session.rollback()
+        return
+    
+    # --- Ensure all tables exist ---
+    print("Creating any missing tables...")
+    Base.metadata.create_all(bind=engine)
+    print("Tables ready.")
 
     try:
         # --- 1. Insert Companies ---
@@ -104,7 +120,7 @@ def populate_database():
                 # --- Stock Prices ---
                 print(f"Fetching stock prices for {symbol}...")
                 end_date = datetime.now()
-                start_date = datetime(2020, 1, 1)
+                start_date = datetime(2014, 1, 1)
                 
                 stock_data = yf.download(symbol, start=start_date, end=end_date, auto_adjust=True, progress=False)
                 

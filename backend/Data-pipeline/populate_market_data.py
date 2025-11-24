@@ -41,8 +41,10 @@ def safe_float_conversion(value):
 
 def populate_market_data():
     """
-    Main function to populate market indices with hourly price data for the latest available day.
-    Clears previous data and fetches fresh hourly data.
+    Main function to populate market indices with:
+    - Yesterday's closing price (single value)
+    - Today's hourly price data
+    Clears previous data and fetches fresh data.
     """
     session = SessionLocal()
 
@@ -75,10 +77,10 @@ def populate_market_data():
         session.commit()
         print("Market indices table updated.")
         
-        # --- Fetch and insert hourly data for each index ---
-        print("\n--- Fetching hourly data for latest available day ---")
+        # --- Fetch and insert data for each index ---
+        print("\n--- Fetching yesterday's close and today's hourly data ---")
         
-        # Calculate date range for the latest day (last 7 days to ensure we get data)
+        # Calculate date range (last 7 days to ensure we get data)
         end_date = datetime.now()
         start_date = end_date - timedelta(days=7)
         
@@ -95,8 +97,44 @@ def populate_market_data():
             print(f"\nProcessing {index_name} ({symbol})...")
             
             try:
-                # Fetch hourly data (1h interval)
-                print(f"Fetching hourly data for {symbol}...")
+                # --- Step 1: Fetch yesterday's closing price (daily data) ---
+                print(f"Fetching yesterday's closing price for {symbol}...")
+                daily_data = yf.download(
+                    symbol, 
+                    start=start_date, 
+                    end=end_date, 
+                    interval='1d',
+                    auto_adjust=True, 
+                    progress=False
+                )
+                
+                yesterday_close_added = False
+                if isinstance(daily_data, pd.DataFrame) and len(daily_data) > 0:
+                    # Handle MultiIndex columns
+                    if isinstance(daily_data.columns, pd.MultiIndex):
+                        daily_data.columns = [col[0] for col in daily_data.columns]
+                    
+                    if 'Close' in daily_data.columns and len(daily_data) >= 2:
+                        # Get second-to-last day (yesterday)
+                        yesterday_date = daily_data.index[-2]
+                        yesterday_price = daily_data.iloc[-2]['Close']
+                        
+                        converted_price = safe_float_conversion(yesterday_price)
+                        if converted_price is not None:
+                            # Store yesterday's close with time set to market close (15:30 IST)
+                            yesterday_datetime = yesterday_date.replace(hour=15, minute=30, second=0)
+                            
+                            hourly_price = HourlyIndexPrice(
+                                index_id=market_index.id,
+                                datetime=yesterday_datetime.to_pydatetime(),
+                                price=converted_price
+                            )
+                            session.add(hourly_price)
+                            yesterday_close_added = True
+                            print(f"Added yesterday's closing price: {converted_price} at {yesterday_datetime.date()}")
+                
+                # --- Step 2: Fetch today's hourly data ---
+                print(f"Fetching today's hourly data for {symbol}...")
                 hourly_data = yf.download(
                     symbol, 
                     start=start_date, 
@@ -107,22 +145,22 @@ def populate_market_data():
                 )
                 
                 if isinstance(hourly_data, pd.DataFrame) and len(hourly_data) > 0:
-                    # Handle MultiIndex columns (single ticker)
+                    # Handle MultiIndex columns
                     if isinstance(hourly_data.columns, pd.MultiIndex):
                         hourly_data.columns = [col[0] for col in hourly_data.columns]
                     
                     # Check if Close column exists
                     if 'Close' in hourly_data.columns:
-                        # Get only the latest day's data
+                        # Get only today's data
                         if len(hourly_data) > 0:
-                            latest_date = hourly_data.index.max().date()
-                            latest_day_data = hourly_data[hourly_data.index.date == latest_date]
+                            latest_date = pd.Timestamp(hourly_data.index.max()).date()
+                            today_data = hourly_data[pd.to_datetime(hourly_data.index).date == latest_date]
                             
-                            print(f"Found {len(latest_day_data)} hourly records for {latest_date}")
+                            print(f"Found {len(today_data)} hourly records for today ({latest_date})")
                             
-                            # Insert hourly prices
-                            for idx in latest_day_data.index:
-                                price_val = latest_day_data.loc[idx, 'Close']
+                            # Insert today's hourly prices
+                            for idx in today_data.index:
+                                price_val = today_data.loc[idx, 'Close']
                                 converted_price = safe_float_conversion(price_val)
                                 
                                 if converted_price is not None:
@@ -134,7 +172,8 @@ def populate_market_data():
                                     session.add(hourly_price)
                             
                             session.commit()
-                            print(f"Successfully added hourly data for {symbol}")
+                            status = "yesterday's close + today's hourly data" if yesterday_close_added else "today's hourly data only"
+                            print(f"Successfully added {status} for {symbol}")
                         else:
                             print(f"No data available for {symbol}")
                     else:
