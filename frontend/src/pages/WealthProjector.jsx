@@ -77,7 +77,6 @@ const WealthProjector = () => {
 
   const buildProjections = (cagr, principal, yearsNum, isSIPMode) => {
     const r = cagr; // annual
-    const n = 12; // monthly
     const months = yearsNum * 12;
 
     let totalInvested = 0;
@@ -85,11 +84,13 @@ const WealthProjector = () => {
 
     if (isSIPMode) {
       const sip = principal;
-      const monthlyRate = r / n;
+      // Convert annual CAGR to monthly rate using the correct formula
+      const monthlyRate = Math.pow(1 + r, 1 / 12) - 1;
 
       totalInvested = sip * months;
 
       if (monthlyRate > 0) {
+        // SIP Future Value Formula: M = P × ({[1 + i]^n – 1} / i) × (1 + i)
         futureValue =
           sip *
           ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate) *
@@ -110,8 +111,8 @@ const WealthProjector = () => {
       let valueAtYear = 0;
       if (isSIPMode) {
         const m = year * 12;
-        const monthlyRate = r / n;
-        if (monthlyRate > 0) {
+        const monthlyRate = Math.pow(1 + r, 1 / 12) - 1;
+        if (monthlyRate > 0 && m > 0) {
           valueAtYear =
             principal *
             ((Math.pow(1 + monthlyRate, m) - 1) / monthlyRate) *
@@ -563,22 +564,22 @@ const WealthProjector = () => {
                   {projection.mode === "sip" ? (
                     <>
                       <p className="text-slate-300 mb-2">
-                        For a SIP, we simulate a fixed amount invested every month
-                        and grow each instalment at the estimated annual CAGR.
+                        For a SIP, we invest a fixed amount every month and compound
+                        it at the monthly equivalent rate derived from the annual CAGR.
                       </p>
                       <p className="text-slate-400 mb-1">
-                        Formula used (approx, SIP):
+                        Formula used (SIP):
                       </p>
                       <p className="text-slate-400">
                         FV = P ×{" "}
                         <span className="font-mono">
-                          ((1 + r/12)<sup>n</sup> − 1) ÷ (r/12)
+                          ((1 + i)<sup>n</sup> − 1) ÷ i
                         </span>{" "}
-                        × (1 + r/12)
+                        × (1 + i)
                       </p>
                       <p className="text-slate-500 mt-1">
-                        where P is your monthly SIP, r is annual CAGR, n is total
-                        months.
+                        where P is your monthly SIP, i is monthly rate = (1 + r)
+                        <sup>1/12</sup> − 1, r is annual CAGR, n is total months.
                       </p>
                     </>
                   ) : (

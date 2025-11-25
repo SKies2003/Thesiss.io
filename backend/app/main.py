@@ -4,8 +4,6 @@ from app.database import models
 from app.api.router import api_router
 from app.core.cors import setup_cors
 
-
-
 # Create all database tables
 models.Base.metadata.create_all(bind=engine)
 
