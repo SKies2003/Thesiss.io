@@ -157,6 +157,8 @@ def populate_market_data():
                             today_data = hourly_data[pd.to_datetime(hourly_data.index).date == latest_date]
                             
                             print(f"Found {len(today_data)} 15-minute records for today ({latest_date})")
+                            if len(today_data) > 0:
+                                print(f"Time range: {today_data.index.min()} to {today_data.index.max()}")
                             
                             # Insert today's 15-minute prices
                             for idx in today_data.index:
@@ -170,6 +172,44 @@ def populate_market_data():
                                         price=converted_price
                                     )
                                     session.add(hourly_price)
+                            
+                            # --- Step 3: Add today's closing price at 3:30 PM if available ---
+                            # Check if we have today's daily closing price
+                            today_daily = yf.download(
+                                symbol,
+                                start=latest_date,
+                                end=latest_date + timedelta(days=1),
+                                interval='1d',
+                                auto_adjust=True,
+                                progress=False
+                            )
+                            
+                            if isinstance(today_daily, pd.DataFrame) and len(today_daily) > 0:
+                                if isinstance(today_daily.columns, pd.MultiIndex):
+                                    today_daily.columns = [col[0] for col in today_daily.columns]
+                                
+                                if 'Close' in today_daily.columns and len(today_daily) > 0:
+                                    today_close_price = today_daily.iloc[0]['Close']
+                                    converted_close = safe_float_conversion(today_close_price)
+                                    
+                                    if converted_close is not None:
+                                        # Create closing time at 3:30 PM
+                                        closing_datetime = datetime.combine(latest_date, datetime.min.time()).replace(hour=15, minute=30, second=0)
+                                        
+                                        # Check if we already have data at 3:30 PM
+                                        existing_330 = any(
+                                            idx.hour == 15 and idx.minute == 30 
+                                            for idx in today_data.index
+                                        )
+                                        
+                                        if not existing_330:
+                                            closing_price_record = HourlyIndexPrice(
+                                                index_id=market_index.id,
+                                                datetime=closing_datetime,
+                                                price=converted_close
+                                            )
+                                            session.add(closing_price_record)
+                                            print(f"Added today's closing price: {converted_close} at 3:30 PM")
                             
                             session.commit()
                             status = "yesterday's close + today's 15-minute data" if yesterday_close_added else "today's 15-minute data only"

@@ -5,20 +5,35 @@ const BASE_URL = "http://127.0.0.1:8000/market-indices";
 
 const hydrateIndex = (detail) => {
   const points = detail.hourly_prices || [];
-  const latest = points.at(-1);
-  const prev = points.at(-2);
-
-  const latestPrice = latest?.price ?? null;
+  
+  // Sort points by datetime to ensure correct ordering
+  const sortedPoints = [...points].sort((a, b) => 
+    new Date(a.datetime) - new Date(b.datetime)
+  );
+  
+  // Get yesterday's closing price (should be at 15:30 of previous day)
+  // and today's closing price (should be at 15:30 of today)
+  let yesterdayClose = null;
+  let todayClose = null;
+  
+  if (sortedPoints.length >= 2) {
+    // Yesterday's close is the first entry (at 15:30 previous day)
+    yesterdayClose = sortedPoints[0];
+    // Today's close is the last entry (at 15:30 today)
+    todayClose = sortedPoints[sortedPoints.length - 1];
+  }
+  
+  const latestPrice = todayClose?.price ?? null;
   const changePercent =
-    latest && prev && prev.price !== 0
-      ? ((latest.price - prev.price) / prev.price) * 100
+    todayClose && yesterdayClose && yesterdayClose.price !== 0
+      ? ((todayClose.price - yesterdayClose.price) / yesterdayClose.price) * 100
       : 0;
 
   return {
     ...detail,
     latestPrice,
     changePercent,
-    sparkline: points.map((p) => ({
+    sparkline: sortedPoints.map((p) => ({
       date: p.datetime,
       value: Number(p.price),
     })),
