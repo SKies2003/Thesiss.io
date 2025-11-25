@@ -131,11 +131,9 @@ def calculate_drip_projection(db: Session, symbol: str, start_date: date, end_da
     # WITHOUT DRIP: Fixed shares, cash accumulates
     shares_without_drip = initial_shares
     cash_without_drip = 0.0
-    total_dividends_paid_without_drip = 0.0
     
     # WITH DRIP: Shares grow over time, reinvesting creates compound effect
     shares_with_drip = initial_shares
-    total_dividends_reinvested = 0.0
     total_shares_from_dividends = 0.0
     
     # Timeline for charting
@@ -160,13 +158,11 @@ def calculate_drip_projection(db: Session, symbol: str, start_date: date, end_da
             # Always the same number of shares, so dividend is linear
             dividend_received_without = shares_without_drip * dividend_per_share
             cash_without_drip += dividend_received_without
-            total_dividends_paid_without_drip += dividend_received_without
             
             # === WITH DRIP (THE MAGIC) ===
             # THIS TIME: More shares = MORE dividend than last time
             # Because shares bought from previous dividends ALSO pay dividends now
             dividend_received_with = shares_with_drip * dividend_per_share
-            total_dividends_reinvested += dividend_received_with
             
             # Buy MORE shares with this dividend
             additional_shares = dividend_received_with / current_price
@@ -223,9 +219,9 @@ def calculate_drip_projection(db: Session, symbol: str, start_date: date, end_da
         'final_value_with_drip': round(final_value_with_drip, 2),
         'extra_wealth_from_drip': round(extra_wealth_from_drip, 2),
         
-        # Dividend statistics
+        # Dividend statistics (same amount, used differently)
         'total_dividends_received': round(cash_without_drip, 2),
-        'total_dividends_reinvested': round(total_dividends_reinvested, 2),
+        'total_dividends_reinvested': round(cash_without_drip, 2),  # Same as without DRIP
         
         # Share accumulation
         'total_shares_without_drip': round(shares_without_drip, 4),
