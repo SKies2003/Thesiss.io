@@ -59,22 +59,28 @@ const HomePage = () => {
           </p>
 
           {/* Buttons */}
-          <div className="flex gap-4 justify-center md:justify-start">
+          <div className="grid grid-cols-2 gap-4 justify-center md:justify-start max-w-xl">
 
             <Link to="/wealth-journey">
-              <button className="px-5 w-43 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 shadow-lg hover:shadow-green-500/30 transition">
+              <button className="w-full px-5 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 shadow-lg hover:shadow-green-500/30 transition">
                 Analyze History
               </button>
             </Link>
 
             <Link to="/wealth-projector">
-              <button className="px-5 w-43 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow-lg hover:shadow-blue-500/30 transition">
+              <button className="w-full px-5 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow-lg hover:shadow-blue-500/30 transition">
                 Project Wealth
               </button>
             </Link>
 
+            <Link to="/drip-simulator">
+              <button className="w-full px-5 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-400 hover:to-pink-500 shadow-lg hover:shadow-purple-500/30 transition">
+                DRIP Planner
+              </button>
+            </Link>
+
             <Link to="/market-overview">
-              <button className="px-5 w-43 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 shadow-lg hover:shadow-green-500/30 transition">
+              <button className="w-full px-5 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 shadow-lg hover:shadow-green-500/30 transition">
                 Market Overview
               </button>
             </Link>

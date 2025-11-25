@@ -5,6 +5,7 @@ import WelcomePage from "./pages/WelcomePage";
 import { Routes, Route } from "react-router-dom";
 import WealthJourney from "./pages/WealthJourney";
 import WealthProjector from "./pages/WealthProjector";
+import DRIPSimulator from "./pages/DRIPSimulator";
 import { useAuth } from "./contexts/AuthContext";
 import { useState, useEffect } from "react";
 import AuthModal from "./components/AuthModal";
@@ -45,6 +46,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/wealth-journey" element={<WealthJourney />} />
             <Route path="/wealth-projector" element={<WealthProjector />} />
+            <Route path="/drip-simulator" element={<DRIPSimulator />} />
             <Route path="/company/:symbol" element={<CompanyDashboard />} />
             <Route path="/market-overview" element={<MarketOverview />} />
             <Route path="/portfolio-summary" element={<PortfolioSummary />} />

@@ -1,12 +1,15 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
-const CompanySelector = ({ selectedCompany, onSelect }) => {
+const CompanySelector = ({ selectedCompany, onSelectCompany, onSelect }) => {
   const { token } = useAuth();
   const [companies, setCompanies] = useState([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Support both prop names for backward compatibility
+  const handleSelect = onSelectCompany || onSelect;
 
   const dropdownRef = useRef(null);
 
@@ -77,7 +80,7 @@ const CompanySelector = ({ selectedCompany, onSelect }) => {
               placeholder="Search companies…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
+              className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-400 outline-none"
             />
           </div>
 
@@ -99,7 +102,7 @@ const CompanySelector = ({ selectedCompany, onSelect }) => {
                   <div
                     key={company.id}
                     onClick={() => {
-                      onSelect(company);
+                      handleSelect(company);
                       setOpen(false);
                     }}
                     className={`px-4 py-3 flex items-center gap-3 cursor-pointer transition 
@@ -117,7 +120,7 @@ const CompanySelector = ({ selectedCompany, onSelect }) => {
                     />
 
                     {/* COMPANY NAME ONLY */}
-                    <span className="font-medium">{company.company_name}</span>
+                    <span className="font-medium text-gray-900">{company.company_name}</span>
                   </div>
                 ))
               )}
