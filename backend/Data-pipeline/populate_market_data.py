@@ -43,7 +43,7 @@ def populate_market_data():
     """
     Main function to populate market indices with:
     - Yesterday's closing price (single value)
-    - Today's hourly price data
+    - Today's 15-minute price data
     Clears previous data and fetches fresh data.
     """
     session = SessionLocal()
@@ -56,11 +56,11 @@ def populate_market_data():
         
         print(f"Found {len(df)} market indices.")
         
-        # --- Clear existing hourly price data ---
-        print("\nClearing previous hourly index price data...")
+        # --- Clear existing 15-minute price data ---
+        print("\nClearing previous 15-minute index price data...")
         session.query(HourlyIndexPrice).delete()
         session.commit()
-        print("Previous hourly data cleared.")
+        print("Previous 15-minute data cleared.")
         
         # --- Ensure all indices exist in market_indices table ---
         print("\nEnsuring all indices exist in market_indices table...")
@@ -78,7 +78,7 @@ def populate_market_data():
         print("Market indices table updated.")
         
         # --- Fetch and insert data for each index ---
-        print("\n--- Fetching yesterday's close and today's hourly data ---")
+        print("\n--- Fetching yesterday's close and today's 15-minute data ---")
         
         # Calculate date range (last 7 days to ensure we get data)
         end_date = datetime.now()
@@ -133,13 +133,13 @@ def populate_market_data():
                             yesterday_close_added = True
                             print(f"Added yesterday's closing price: {converted_price} at {yesterday_datetime.date()}")
                 
-                # --- Step 2: Fetch today's hourly data ---
-                print(f"Fetching today's hourly data for {symbol}...")
+                # --- Step 2: Fetch today's 15-minute data ---
+                print(f"Fetching today's 15-minute data for {symbol}...")
                 hourly_data = yf.download(
                     symbol, 
                     start=start_date, 
                     end=end_date, 
-                    interval='1h',
+                    interval='15m',
                     auto_adjust=True, 
                     progress=False
                 )
@@ -156,9 +156,9 @@ def populate_market_data():
                             latest_date = pd.Timestamp(hourly_data.index.max()).date()
                             today_data = hourly_data[pd.to_datetime(hourly_data.index).date == latest_date]
                             
-                            print(f"Found {len(today_data)} hourly records for today ({latest_date})")
+                            print(f"Found {len(today_data)} 15-minute records for today ({latest_date})")
                             
-                            # Insert today's hourly prices
+                            # Insert today's 15-minute prices
                             for idx in today_data.index:
                                 price_val = today_data.loc[idx, 'Close']
                                 converted_price = safe_float_conversion(price_val)
@@ -172,14 +172,14 @@ def populate_market_data():
                                     session.add(hourly_price)
                             
                             session.commit()
-                            status = "yesterday's close + today's hourly data" if yesterday_close_added else "today's hourly data only"
+                            status = "yesterday's close + today's 15-minute data" if yesterday_close_added else "today's 15-minute data only"
                             print(f"Successfully added {status} for {symbol}")
                         else:
                             print(f"No data available for {symbol}")
                     else:
                         print(f"No Close column found for {symbol}")
                 else:
-                    print(f"No valid hourly data found for {symbol}")
+                    print(f"No valid 15-minute data found for {symbol}")
                     
             except Exception as e:
                 print(f"!!! Error processing {symbol}: {e} !!!")
@@ -193,7 +193,7 @@ def populate_market_data():
         total_hourly_prices = session.query(HourlyIndexPrice).count()
         print(f"\nSummary:")
         print(f"Total market indices: {total_indices}")
-        print(f"Total hourly price records: {total_hourly_prices}")
+        print(f"Total 15-minute price records: {total_hourly_prices}")
         
     except Exception as e:
         print(f"\nA critical error occurred: {e}")
