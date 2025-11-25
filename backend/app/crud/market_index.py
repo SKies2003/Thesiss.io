@@ -5,9 +5,9 @@ from typing import List, Optional
 
 def get_all_indices(db: Session) -> List[MarketIndex]:
     """
-    Fetch all market indices from the database
+    Fetch all market indices from the database ordered by ID ascending
     """
-    return db.query(MarketIndex).order_by(MarketIndex.name).all()
+    return db.query(MarketIndex).order_by(MarketIndex.id).all()
 
 
 def get_index_by_symbol(db: Session, symbol: str) -> Optional[MarketIndex]:

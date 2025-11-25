@@ -76,7 +76,7 @@ def get_ticker_data(db: Session):
                     "symbol": company.symbol.replace(".NS", ""),
                     "company_name": company.company_name,
                     "current_price": current_price,
-                    "change_percent": abs(change),
+                    "change_percent": change,  # Keep the actual sign
                     "is_profit": change >= 0
                 })
         except Exception as e:
