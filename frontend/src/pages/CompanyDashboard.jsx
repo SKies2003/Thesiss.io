@@ -13,8 +13,10 @@ import {
   Brush,
   AreaChart,
   Area,
-  ComposedChart, 
+  ComposedChart,
 } from "recharts";
+
+
 
 /* ---------- Helpers ---------- */
 
@@ -92,31 +94,51 @@ const addMovingAverages = (sortedPrices) => {
     return updated;
   });
 };
+
 const generateScreenerTicks = (min, max) => {
-    if (!min || !max) return [];
-  
-    const range = max - min;
-    let step = 100;
-  
-    if (range > 2000) step = 200;
-    if (range > 4000) step = 500;
-    if (range > 8000) step = 1000;
-  
-    const start = Math.floor(min / step) * step;
-    const end = Math.ceil(max / step) * step;
-  
-    const ticks = [];
-    for (let v = start; v <= end; v += step) {
-      ticks.push(v);
-    }
-    return ticks;
-  };
-  
+  // If domain is 'auto' or invalid, don't force ticks
+  if (min === "auto" || max === "auto" || min == null || max == null) return undefined;
+
+  // ensure numbers
+  const nmin = Number(min);
+  const nmax = Number(max);
+  if (isNaN(nmin) || isNaN(nmax)) return undefined;
+
+  const range = nmax - nmin;
+  let step = 100;
+
+  if (range > 2000) step = 200;
+  if (range > 4000) step = 500;
+  if (range > 8000) step = 1000;
+
+  const start = Math.floor(nmin / step) * step;
+  const end = Math.ceil(nmax / step) * step;
+
+  const ticks = [];
+  for (let v = start; v <= end; v += step) {
+    ticks.push(v);
+  }
+  return ticks;
+};
+
+const getStartDate = (timeRange) => {
+  const today = new Date();
+  if (timeRange === "ALL") return "2014-01-01";
+
+  const cfg = TIME_RANGES.find((t) => t.key === timeRange);
+  const d = new Date(today);
+
+  if (cfg?.months) d.setMonth(d.getMonth() - cfg.months);
+  if (cfg?.years) d.setFullYear(d.getFullYear() - cfg.years);
+
+  return d.toISOString().slice(0, 10);
+};
+
 /* ---------- Component ---------- */
 
 const CompanyDashboard = () => {
   const { symbol: symbolParam } = useParams();
-  const symbol = decodeURIComponent(symbolParam);
+  const symbol = decodeURIComponent(symbolParam || "");
   const location = useLocation();
   const navigate = useNavigate();
   const { token } = useAuth();
@@ -134,7 +156,6 @@ const CompanyDashboard = () => {
   const selectedCompanyFromState = location.state?.company;
 
   /* ---------- Fetch data ---------- */
-
   useEffect(() => {
     const fetchData = async () => {
       if (!token) {
@@ -148,15 +169,15 @@ const CompanyDashboard = () => {
         setError("");
 
         const today = new Date().toISOString().slice(0, 10);
+        const startDate = timeRange === "ALL" ? "2014-01-01" : getStartDate(timeRange);
+
         const params = new URLSearchParams({
-          start_date: "2020-01-01",
+          start_date: startDate,
           end_date: today,
         });
 
         const res = await fetch(
-          `http://localhost:8000/companies/${encodeURIComponent(
-            symbol
-          )}?${params.toString()}`,
+          `http://localhost:8000/companies/${encodeURIComponent(symbol)}?${params.toString()}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -177,16 +198,10 @@ const CompanyDashboard = () => {
     };
 
     fetchData();
-  }, [symbol, token]);
+  }, [symbol, token, timeRange]); // <--- important: re-fetch when timeRange changes
 
   /* ---------- Compute chart & stats ---------- */
-
-  const {
-    chartData,
-    filteredEvents,
-    stats,
-    latestFinancials,
-  } = useMemo(() => {
+  const { chartData, filteredEvents, stats, latestFinancials } = useMemo(() => {
     if (!companyData?.stock_prices?.length) {
       return {
         chartData: [],
@@ -196,21 +211,22 @@ const CompanyDashboard = () => {
       };
     }
 
+    // Keep date strings, but compute Date objects when needed
     const rawPrices = [...companyData.stock_prices]
-      .map((p) => ({ 
-        date: p.date, 
+      .map((p) => ({
+        date: p.date, // string "YYYY-MM-DD"
         price: Number(p.price),
-        volume: Number(p.volume || 0), 
+        volume: Number(p.volume || 0),
       }))
       .sort((a, b) => new Date(a.date) - new Date(b.date));
 
     const financials = companyData.financials || [];
     const actions = companyData.corporate_actions || [];
 
-    // Add MA10/20/50 to full series
+    // Add MA fields (works with price order)
     let enriched = addMovingAverages(rawPrices);
 
-    // Attach financials (revenue, net_income)
+    // Attach financials (revenue, net_income) by date string
     const mapByDate = new Map(enriched.map((p) => [p.date, { ...p }]));
     financials.forEach((f) => {
       const rec = mapByDate.get(f.date);
@@ -227,20 +243,22 @@ const CompanyDashboard = () => {
       (a, b) => new Date(a.date) - new Date(b.date)
     );
 
-    // Determine range
+    // Determine overall min/max from enriched series
     const minDate = new Date(enriched[0].date);
     const maxDate = new Date(enriched[enriched.length - 1].date);
 
+    // Compute visible fromDate based on timeRange (keep as Date)
     let fromDate = minDate;
     if (timeRange !== "ALL") {
       const cfg = TIME_RANGES.find((t) => t.key === timeRange);
-      const d = new Date(maxDate);
+      let d = new Date(maxDate); // use let so we can reassign
       if (cfg?.months) d.setMonth(d.getMonth() - cfg.months);
       if (cfg?.years) d.setFullYear(d.getFullYear() - cfg.years);
       if (d < minDate) d = minDate;
       fromDate = d;
     }
 
+    // Filter using Date comparisons
     const inRange = enriched.filter((pt) => {
       const d = new Date(pt.date);
       return d >= fromDate && d <= maxDate;
@@ -259,8 +277,7 @@ const CompanyDashboard = () => {
     const volatility =
       highPrice != null && lowPrice != null ? highPrice - lowPrice : null;
 
-    const prevIndex =
-      pricesInRange.length > 5 ? pricesInRange.length - 6 : 0;
+    const prevIndex = pricesInRange.length > 5 ? pricesInRange.length - 6 : 0;
     const previousPrice =
       pricesInRange.length > 0 ? pricesInRange[prevIndex] : null;
 
@@ -269,14 +286,12 @@ const CompanyDashboard = () => {
         ? latestPrice - previousPrice
         : null;
     const priceChangePct =
-      latestPrice != null && previousPrice
-        ? (priceChangeAbs / previousPrice) * 100
-        : null;
+      latestPrice != null && previousPrice ? (priceChangeAbs / previousPrice) * 100 : null;
 
     const lastPoint = inRange[inRange.length - 1] || {};
     const ma20 = lastPoint.ma20 ?? null;
 
-    // Dividend events (green dots)
+    // Events: dividends (use date string for matching); use the same date strings as enriched
     const events = [];
     actions.forEach((e) => {
       if (e.action_type !== "DIVIDEND") return;
@@ -284,14 +299,14 @@ const CompanyDashboard = () => {
       if (!rec || rec.price == null || isNaN(rec.price)) return;
       events.push({
         id: e.id,
-        date: e.date,
+        date: e.date, // string date, used for tooltip/listing
         price: rec.price,
         action_type: "DIVIDEND",
         details: e.details,
       });
     });
 
-    // Financial events (red dots) using enriched data
+    // Financial events (red dots) using enriched data (date strings)
     inRange
       .filter((p) => p.hasFinancial && p.price != null && !isNaN(p.price))
       .forEach((p) => {
@@ -307,12 +322,10 @@ const CompanyDashboard = () => {
         });
       });
 
-    // Latest financial summary
+    // Latest financial summary (raw financials array)
     const latestFin =
       financials
-        .filter(
-          (f) => f.total_revenue != null && f.net_income != null
-        )
+        .filter((f) => f.total_revenue != null && f.net_income != null)
         .sort((a, b) => new Date(b.date) - new Date(a.date))[0] || null;
 
     const latestFinancials = latestFin
@@ -343,78 +356,45 @@ const CompanyDashboard = () => {
     };
   }, [companyData, timeRange]);
 
-  const {
-    latestPrice,
-    highPrice,
-    lowPrice,
-    volatility,
-    priceChangeAbs,
-    priceChangePct,
-    ma20,
-  } = stats || {};
+  const { latestPrice, highPrice, lowPrice, volatility, priceChangeAbs, priceChangePct, ma20 } =
+    stats || {};
 
-  const companyName =
-    selectedCompanyFromState?.company_name || companyData?.company_name || "";
-  const uiSymbol =
-    (selectedCompanyFromState?.symbol ||
-      companyData?.symbol ||
-      ""
-    ).replace(".NS", "");
+  const companyName = selectedCompanyFromState?.company_name || companyData?.company_name || "";
+  const uiSymbol = (selectedCompanyFromState?.symbol || companyData?.symbol || "").replace(".NS", "");
 
-  // For Y-axis domain padding
-  const domainMin =
-    lowPrice != null ? lowPrice * 0.95 : "auto";
-  const domainMax =
-    highPrice != null ? highPrice * 1.05 : "auto";
+  // Y-axis domain padding - keep as numbers or 'auto'
+  const domainMin = lowPrice != null ? lowPrice * 0.95 : "auto";
+  const domainMax = highPrice != null ? highPrice * 1.05 : "auto";
 
   /* ---------- Tooltip ---------- */
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload || !payload.length) return null;
 
-    const point =
-      payload.find((p) => p.dataKey === "price")?.payload ||
-      payload[0].payload;
+    const point = payload.find((p) => p.dataKey === "price")?.payload || payload[0].payload;
 
-    const eventsOnDate = filteredEvents.filter((e) => e.date === label);
+    // label is the date string from dataKey "date" (we used string dates)
+    const dateString = label;
+    const eventsOnDate = filteredEvents.filter((e) => e.date === dateString);
 
     return (
       <div className="bg-gray-800/90 text-gray-100 text-xs rounded-lg px-3 py-2 border border-blue-900/50 shadow-2xl backdrop-blur-sm font-sans">
-        <div className="font-semibold mb-1">{formatDate(label)}</div>
+        <div className="font-semibold mb-1">{formatDate(dateString)}</div>
 
-        {point.price != null && (
-          <div className="mb-1">Price: {formatPrice(point.price)}</div>
-        )}
-        
-        {/* Removed volume from tooltip as requested */}
+        {point.price != null && <div className="mb-1">Price: {formatPrice(point.price)}</div>}
 
-        {maOptions.show10 && point.ma10 != null && (
-          <div className="mb-0.5">10-MA: {formatPrice(point.ma10)}</div>
-        )}
-        {maOptions.show20 && point.ma20 != null && (
-          <div className="mb-0.5">20-MA: {formatPrice(point.ma20)}</div>
-        )}
-        {maOptions.show50 && point.ma50 != null && (
-          <div className="mb-0.5">50-MA: {formatPrice(point.ma50)}</div>
-        )}
+        {maOptions.show10 && point.ma10 != null && <div className="mb-0.5">10-MA: {formatPrice(point.ma10)}</div>}
+        {maOptions.show20 && point.ma20 != null && <div className="mb-0.5">20-MA: {formatPrice(point.ma20)}</div>}
+        {maOptions.show50 && point.ma50 != null && <div className="mb-0.5">50-MA: {formatPrice(point.ma50)}</div>}
 
         {eventsOnDate.length > 0 && (
           <div className="mt-2 pt-2 border-t border-gray-700">
             {eventsOnDate.map((e) => (
               <div
                 key={e.id}
-                className={`flex items-center gap-2 ${
-                  e.action_type === "FINANCIAL"
-                    ? "text-red-400"
-                    : "text-green-400"
-                }`}
+                className={`flex items-center gap-2 ${e.action_type === "FINANCIAL" ? "text-red-400" : "text-green-400"}`}
               >
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{
-                    backgroundColor: actionColors[e.action_type] || "#fff",
-                  }}
-                />
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: actionColors[e.action_type] || "#fff" }} />
                 {e.action_type === "DIVIDEND" && (
                   <>
                     <span className="font-semibold">DIVIDEND:</span>
@@ -424,12 +404,8 @@ const CompanyDashboard = () => {
                 {e.action_type === "FINANCIAL" && (
                   <>
                     <span className="font-semibold">FINANCIAL:</span>
-                    <span className="text-emerald-400">
-                      Rev {formatCurrency(e.details?.revenue, false)}
-                    </span>
-                    <span className="text-purple-400 ml-2">
-                      Prof {formatCurrency(e.details?.net_income, false)}
-                    </span>
+                    <span className="text-emerald-400">Rev {formatCurrency(e.details?.revenue, false)}</span>
+                    <span className="text-purple-400 ml-2">Prof {formatCurrency(e.details?.net_income, false)}</span>
                   </>
                 )}
               </div>
@@ -454,17 +430,14 @@ const CompanyDashboard = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 to-slate-900 text-gray-100 flex flex-col items-center justify-center pt-16">
         <p className="text-red-400 text-sm mb-3">{error}</p>
-        <button
-          onClick={() => navigate("/wealth-journey")}
-          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-lg text-sm font-semibold hover:from-blue-700 hover:to-cyan-600 transition duration-300 shadow-md"
-        >
+        <button onClick={() => navigate("/wealth-journey")} className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-lg text-sm font-semibold hover:from-blue-700 hover:to-cyan-600 transition duration-300 shadow-md">
           Back to company selection
         </button>
       </div>
     );
   }
 
-  /* ---------- UI ---------- */
+  /* ---------- UI (unchanged) ---------- */
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-slate-900 text-gray-100 pt-16 pb-10 font-sans">
@@ -475,27 +448,17 @@ const CompanyDashboard = () => {
             {companyName?.[0] || uiSymbol?.[0] || "C"}
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-50">
-              {companyName || "Company"}
-            </div>
+            <div className="text-2xl font-bold text-gray-50">{companyName || "Company"}</div>
             <div className="text-cyan-400 text-sm">{uiSymbol}</div>
           </div>
         </div>
 
         <div className="text-right">
           <div className="text-xs text-gray-400">Current Price</div>
-          <div className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-300">
-            {formatPrice(latestPrice)}
-          </div>
+          <div className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-300">{formatPrice(latestPrice)}</div>
           {priceChangePct != null && (
-            <div
-              className={`text-sm mt-1 font-semibold ${
-                priceChangeAbs >= 0 ? "text-emerald-400" : "text-red-400"
-              }`}
-            >
-              {priceChangeAbs >= 0 ? "▲" : "▼"}{" "}
-              {priceChangeAbs?.toFixed?.(2) ?? "--"} (
-              {priceChangePct?.toFixed?.(2) ?? "--"}%)
+            <div className={`text-sm mt-1 font-semibold ${priceChangeAbs >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {priceChangeAbs >= 0 ? "▲" : "▼"} {priceChangeAbs?.toFixed?.(2) ?? "--"} ({priceChangePct?.toFixed?.(2) ?? "--"}%)
             </div>
           )}
         </div>
@@ -505,33 +468,23 @@ const CompanyDashboard = () => {
       <div className="max-w-6xl mx-auto mt-6 bg-gray-900/70 rounded-2xl px-6 py-4 shadow-[0_0_50px_rgba(0,180,255,0.15)] flex justify-between flex-wrap text-sm border border-gray-700/50">
         <div className="flex flex-col items-center p-3 w-[18%]">
           <span className="text-gray-400 mb-1">• Current Price</span>
-          <span className="font-bold text-lg text-cyan-400">
-            {formatPrice(latestPrice)}
-          </span>
+          <span className="font-bold text-lg text-cyan-400">{formatPrice(latestPrice)}</span>
         </div>
         <div className="flex flex-col items-center p-3 w-[18%]">
           <span className="text-gray-400 mb-1">↑ High</span>
-          <span className="font-bold text-lg">
-            {formatPrice(highPrice)}
-          </span>
+          <span className="font-bold text-lg">{formatPrice(highPrice)}</span>
         </div>
         <div className="flex flex-col items-center p-3 w-[18%]">
           <span className="text-gray-400 mb-1">↓ Low</span>
-          <span className="font-bold text-lg">
-            {formatPrice(lowPrice)}
-          </span>
+          <span className="font-bold text-lg">{formatPrice(lowPrice)}</span>
         </div>
         <div className="flex flex-col items-center p-3 w-[18%]">
           <span className="text-gray-400 mb-1">≈ Range</span>
-          <span className="font-bold text-lg">
-            {volatility != null ? formatPrice(volatility) : "--"}
-          </span>
+          <span className="font-bold text-lg">{volatility != null ? formatPrice(volatility) : "--"}</span>
         </div>
         <div className="flex flex-col items-center p-3 w-[18%]">
           <span className="text-gray-400 mb-1">20-MA</span>
-          <span className="font-bold text-lg text-yellow-300">
-            {formatPrice(ma20)}
-          </span>
+          <span className="font-bold text-lg text-yellow-300">{formatPrice(ma20)}</span>
         </div>
       </div>
 
@@ -539,16 +492,7 @@ const CompanyDashboard = () => {
       <div className="max-w-6xl mx-auto mt-6 flex gap-2 flex-wrap items-center">
         <div className="flex gap-2 flex-wrap">
           {TIME_RANGES.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTimeRange(t.key)}
-              // Date range buttons for consistent blue gradient / hover
-              className={`px-3 py-1.5 text-xs rounded-full border transition duration-300 ${
-                timeRange === t.key
-                  ? "bg-gradient-to-r from-blue-600 to-cyan-500 text-white border-blue-400 shadow-md shadow-blue-500/40"
-                  : "border-gray-700 text-gray-300 hover:bg-gray-800/60 hover:border-gray-600"
-              }`}
-            >
+            <button key={t.key} onClick={() => setTimeRange(t.key)} className={`px-3 py-1.5 text-xs rounded-full border transition duration-300 ${timeRange === t.key ? "bg-gradient-to-r from-blue-600 to-cyan-500 text-white border-blue-400 shadow-md shadow-blue-500/40" : "border-gray-700 text-gray-300 hover:bg-gray-800/60 hover:border-gray-600"}`}>
               {t.label}
             </button>
           ))}
@@ -556,36 +500,15 @@ const CompanyDashboard = () => {
 
         <div className="flex gap-4 ml-6 text-xs text-gray-200">
           <label className="flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              className="w-3 h-3 bg-gray-700 border-gray-500 rounded appearance-none checked:bg-yellow-200 checked:border-yellow-200"
-              checked={maOptions.show10}
-              onChange={() =>
-                setMaOptions((p) => ({ ...p, show10: !p.show10 }))
-              }
-            />
+            <input type="checkbox" className="w-3 h-3 bg-gray-700 border-gray-500 rounded appearance-none checked:bg-yellow-200 checked:border-yellow-200" checked={maOptions.show10} onChange={() => setMaOptions((p) => ({ ...p, show10: !p.show10 }))} />
             <span className="ml-1.5 text-yellow-200">10-Day MA</span>
           </label>
           <label className="flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              className="w-3 h-3 bg-gray-700 border-gray-500 rounded appearance-none checked:bg-yellow-400 checked:border-yellow-400"
-              checked={maOptions.show20}
-              onChange={() =>
-                setMaOptions((p) => ({ ...p, show20: !p.show20 }))
-              }
-            />
+            <input type="checkbox" className="w-3 h-3 bg-gray-700 border-gray-500 rounded appearance-none checked:bg-yellow-400 checked:border-yellow-400" checked={maOptions.show20} onChange={() => setMaOptions((p) => ({ ...p, show20: !p.show20 }))} />
             <span className="ml-1.5 text-yellow-400">20-Day MA</span>
           </label>
           <label className="flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              className="w-3 h-3 bg-gray-700 border-gray-500 rounded appearance-none checked:bg-orange-400 checked:border-orange-400"
-              checked={maOptions.show50}
-              onChange={() =>
-                setMaOptions((p) => ({ ...p, show50: !p.show50 }))
-              }
-            />
+            <input type="checkbox" className="w-3 h-3 bg-gray-700 border-gray-500 rounded appearance-none checked:bg-orange-400 checked:border-orange-400" checked={maOptions.show50} onChange={() => setMaOptions((p) => ({ ...p, show50: !p.show50 }))} />
             <span className="ml-1.5 text-orange-400">50-Day MA</span>
           </label>
         </div>
@@ -593,9 +516,7 @@ const CompanyDashboard = () => {
 
       {/* MAIN CHART */}
       <div className="max-w-6xl mx-auto mt-6 bg-gray-900/70 rounded-3xl p-6 shadow-[0_0_50px_rgba(0,180,255,0.15)] border border-gray-700/50">
-        <h3 className="text-xl font-semibold mb-4 text-center text-gray-100">
-          {companyName || uiSymbol} – Stock Price Analysis
-        </h3>
+        <h3 className="text-xl font-semibold mb-4 text-center text-gray-100">{companyName || uiSymbol} – Stock Price Analysis</h3>
 
         {/* Custom legend row */}
         <div className="flex justify-center gap-4 text-xs mb-4 text-gray-300">
@@ -630,13 +551,11 @@ const CompanyDashboard = () => {
         </div>
 
         {!chartData || chartData.length === 0 ? (
-          <div className="text-center text-gray-400 py-20 text-sm">
-            Not enough data to display chart.
-          </div>
+          <div className="text-center text-gray-400 py-20 text-sm">Not enough data to display chart.</div>
         ) : (
           <div style={{ width: "100%", height: 450 }}>
             <ResponsiveContainer>
-              <ComposedChart data={chartData}> 
+              <ComposedChart data={chartData}>
                 <CartesianGrid stroke="#3f3f46" strokeDasharray="3 3" />
 
                 <XAxis
@@ -652,97 +571,35 @@ const CompanyDashboard = () => {
                   minTickGap={25}
                 />
 
-                {/* SINGLE RIGHT Y-AXIS: PRICE */}
                 <YAxis
-                yAxisId="right"
-                orientation="right"
-                tick={{ fill: "#3b82f6", fontSize: 11 }}
-                domain={[domainMin, domainMax]}
-                ticks={generateScreenerTicks(domainMin, domainMax)}
-                tickFormatter={(v) => v.toLocaleString("en-IN")}
-                stroke="#3b82f6"
-                style={{ transform: 'translate(10px, 0)' }}
+                  yAxisId="right"
+                  orientation="right"
+                  tick={{ fill: "#3b82f6", fontSize: 11 }}
+                  domain={[domainMin, domainMax]}
+                  ticks={generateScreenerTicks(domainMin, domainMax)}
+                  tickFormatter={(v) => v.toLocaleString("en-IN")}
+                  stroke="#3b82f6"
+                  style={{ transform: "translate(10px, 0)" }}
                 />
-
 
                 <Tooltip content={<CustomTooltip />} />
 
-                {/* Brush for zoom */}
-                <Brush
-                  dataKey="date"
-                  height={30}
-                  stroke="#3b82f6" // Reverted to original blue stroke
-                  fill="#3b82f640" // Reverted to original blue fill shade
-                  travellerWidth={10}
-                >
+                <Brush dataKey="date" height={30} stroke="#3b82f6" fill="#3b82f640" travellerWidth={10}>
                   <AreaChart>
                     <YAxis hide domain={[domainMin, domainMax]} />
-                    <Area
-                      dataKey="price"
-                      stroke="#3b82f6" 
-                      fill="#3b82f640" 
-                    />
+                    <Area dataKey="price" stroke="#3b82f6" fill="#3b82f640" />
                   </AreaChart>
                 </Brush>
 
-                {/* MA lines */}
-                {maOptions.show50 && (
-                  <Line
-                    type="monotone"
-                    dataKey="ma50"
-                    stroke="#fb923c" // Orange
-                    strokeWidth={2}
-                    dot={false}
-                    strokeDasharray="10 5"
-                    yAxisId="right"
-                  />
-                )}
-                {maOptions.show20 && (
-                  <Line
-                    type="monotone"
-                    dataKey="ma20"
-                    stroke="#facc15" // Yellow
-                    strokeWidth={2}
-                    dot={false}
-                    strokeDasharray="4 4"
-                    yAxisId="right"
-                  />
-                )}
-                {maOptions.show10 && (
-                  <Line
-                    type="monotone"
-                    dataKey="ma10"
-                    stroke="#fef08a" // Light Yellow
-                    strokeWidth={1.5}
-                    dot={false}
-                    strokeDasharray="2 4"
-                    yAxisId="right"
-                  />
-                )}
+                {maOptions.show50 && <Line type="monotone" dataKey="ma50" stroke="#fb923c" strokeWidth={2} dot={false} strokeDasharray="10 5" yAxisId="right" />}
+                {maOptions.show20 && <Line type="monotone" dataKey="ma20" stroke="#facc15" strokeWidth={2} dot={false} strokeDasharray="4 4" yAxisId="right" />}
+                {maOptions.show10 && <Line type="monotone" dataKey="ma10" stroke="#fef08a" strokeWidth={1.5} dot={false} strokeDasharray="2 4" yAxisId="right" />}
 
-                {/* Price line - ORIGINAL COLOR */}
-                <Line
-                  type="monotone"
-                  dataKey="price"
-                  stroke="#3b82f6" 
-                  strokeWidth={2}
-                  dot={false}
-                  yAxisId="right"
-                />
+                <Line type="monotone" dataKey="price" stroke="#3b82f6" strokeWidth={2} dot={false} yAxisId="right" />
 
-                {/* Event dots */}
                 {filteredEvents.map((e) =>
                   e.price != null && !isNaN(e.price) ? (
-                    <ReferenceDot
-                      key={e.id}
-                      x={e.date}
-                      y={e.price}
-                      r={5}
-                      yAxisId="right"
-                      fill={actionColors[e.action_type]}
-                      stroke="#ffffff"
-                      strokeWidth={2}
-                    />
+                    <ReferenceDot key={e.id} x={e.date} y={e.price} r={5} yAxisId="right" fill={actionColors[e.action_type]} stroke="#ffffff" strokeWidth={2} />
                   ) : null
                 )}
               </ComposedChart>
@@ -753,55 +610,33 @@ const CompanyDashboard = () => {
 
       {/* FINANCIAL SUMMARY */}
       <div className="max-w-6xl mx-auto mt-8 bg-gray-900/70 rounded-2xl px-6 py-5 shadow-[0_0_50px_rgba(0,180,255,0.15)] border border-gray-700/50">
-        <h3 className="text-xl font-semibold mb-4 flex items-center text-gray-200">
-          Financial Summary
-        </h3>
+        <h3 className="text-xl font-semibold mb-4 flex items-center text-gray-200">Financial Summary</h3>
 
         {latestFinancials.date ? (
           <div className="flex gap-20 flex-wrap">
             <div>
               <div className="text-gray-400 mb-2 text-sm">Latest Revenue</div>
-              {/* REVERTED TO SOLID COLOR */}
-              <div className="text-3xl font-extrabold text-emerald-400">
-                {formatCurrency(latestFinancials.revenue)}
-              </div>
-              <div className="text-sm text-gray-400 mt-1">
-                Date: {formatDate(latestFinancials.date)}
-              </div>
+              <div className="text-3xl font-extrabold text-emerald-400">{formatCurrency(latestFinancials.revenue)}</div>
+              <div className="text-sm text-gray-400 mt-1">Date: {formatDate(latestFinancials.date)}</div>
             </div>
 
             <div>
               <div className="text-gray-400 mb-2 text-sm">Latest Profit</div>
-              {/* REVERTED TO SOLID COLOR */}
-              <div className="text-3xl font-extrabold text-purple-400">
-                {formatCurrency(latestFinancials.net_income)}
-              </div>
-              <div className="text-sm text-gray-400 mt-1">
-                Margin:{" "}
-                {latestFinancials.margin != null
-                  ? `${latestFinancials.margin.toFixed(2)}%`
-                  : "--"}
-              </div>
+              <div className="text-3xl font-extrabold text-purple-400">{formatCurrency(latestFinancials.net_income)}</div>
+              <div className="text-sm text-gray-400 mt-1">Margin: {latestFinancials.margin != null ? `${latestFinancials.margin.toFixed(2)}%` : "--"}</div>
             </div>
           </div>
         ) : (
-          <div className="text-gray-400 text-sm">
-            No recent financial summary available.
-          </div>
+          <div className="text-gray-400 text-sm">No recent financial summary available.</div>
         )}
       </div>
 
       {/* EVENT LIST – only dividends */}
       <div className="max-w-6xl mx-auto mt-8">
-        <h3 className="text-sm font-semibold mb-2 text-gray-200">
-          Dividend History
-        </h3>
+        <h3 className="text-sm font-semibold mb-2 text-gray-200">Dividend History</h3>
 
-        {filteredEvents.filter((e) => e.action_type === "DIVIDEND").length ===
-        0 ? (
-          <div className="text-gray-400 text-xs">
-            No dividend events in this period.
-          </div>
+        {filteredEvents.filter((e) => e.action_type === "DIVIDEND").length === 0 ? (
+          <div className="text-gray-400 text-xs">No dividend events in this period.</div>
         ) : (
           <div className="space-y-2">
             {filteredEvents
@@ -809,23 +644,13 @@ const CompanyDashboard = () => {
               .slice()
               .sort((a, b) => new Date(b.date) - new Date(a.date))
               .map((e) => (
-                <div
-                  key={e.id}
-                  className="flex items-center justify-between bg-gray-900/50 px-3 py-2 border border-emerald-900/50 rounded-lg text-xs hover:bg-gray-800/70 transition duration-150"
-                >
+                <div key={e.id} className="flex items-center justify-between bg-gray-900/50 px-3 py-2 border border-emerald-900/50 rounded-lg text-xs hover:bg-gray-800/70 transition duration-150">
                   <div className="flex items-center gap-2">
-                    <span
-                      className="w-2 h-2 rounded-full shadow-lg shadow-emerald-600/50"
-                      style={{ backgroundColor: actionColors.DIVIDEND }}
-                    />
+                    <span className="w-2 h-2 rounded-full shadow-lg shadow-emerald-600/50" style={{ backgroundColor: actionColors.DIVIDEND }} />
                     <span className="font-medium text-emerald-300">Dividend</span>
-                    <span className="text-gray-400">
-                      Value: {formatPrice(e.details?.value)}
-                    </span>
+                    <span className="text-gray-400">Value: {formatPrice(e.details?.value)}</span>
                   </div>
-                  <div className="text-gray-400">
-                    {formatDate(e.date)}
-                  </div>
+                  <div className="text-gray-400">{formatDate(e.date)}</div>
                 </div>
               ))}
           </div>
@@ -836,3 +661,4 @@ const CompanyDashboard = () => {
 };
 
 export default CompanyDashboard;
+
